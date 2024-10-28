@@ -29,10 +29,15 @@ list_github_tags() {
 		sed 's/^v//' # NOTE: You might want to adapt this sed to remove non-version strings from tags
 }
 
+list_github_releases() {
+	curl -v https://api.github.com/repos/ultimaker/cura/releases | jq '.[].tag_name'
+}
+
 list_all_versions() {
 	# TODO: Adapt this. By default we simply list the tag names from GitHub releases.
 	# Change this function if cura has other means of determining installable versions.
-	list_github_tags
+	#list_github_tags
+	list_github_releases
 }
 
 download_release() {
@@ -51,17 +56,19 @@ install_version() {
 	local version="$2"
 	local install_path="${3%/bin}/bin"
 
+	set -x
 	if [ "$install_type" != "version" ]; then
 		fail "asdf-$TOOL_NAME supports release installs only"
 	fi
 
 	(
 		mkdir -p "$install_path"
-		cp -r "$ASDF_DOWNLOAD_PATH"/* "$install_path"
+		cp -r "$ASDF_DOWNLOAD_PATH"/"$TOOL_NAME"-"$version" "$install_path"/"$TOOL_NAME"
+		chmod +x "$install_path"/"$TOOL_NAME"
 
 		local tool_cmd
-		test -x "$install_path/$tool_cmd" || fail "Expected $install_path/$tool_cmd to be executable."
 		tool_cmd="$(echo "$TOOL_TEST" | cut -d' ' -f1)"
+		test -x "$install_path/$tool_cmd" || fail "Expected $install_path/$tool_cmd to be executable."
 
 		echo "$TOOL_NAME $version installation was successful!"
 	) || (
